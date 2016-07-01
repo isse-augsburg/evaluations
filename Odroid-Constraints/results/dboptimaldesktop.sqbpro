@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?><sqlb_project><db path="/home/alexander/Documents/Projects/swarm-robotics/swarmrobotics-paper/2016-09-SASO-PositionPaper/Evaluation/EvaluationProject/results/desktop.db"/><window><current_tab id="3"/></window><tab_structure><column_width id="0" width="300"/><column_width id="1" width="0"/><column_width id="2" width="100"/><column_width id="3" width="1006"/><expanded_item id="0" parent="-1"/><expanded_item id="1" parent="-1"/><expanded_item id="2" parent="-1"/><expanded_item id="3" parent="-1"/></tab_structure><tab_browse><current_table name=""/><default_encoding codec=""/><browsetable_info data="AAAAAA=="/></tab_browse><tab_sql><sql name="creates.sql">CREATE TABLE IF NOT EXISTS Solver 
+( ID INTEGER PRIMARY KEY,
+  SolverName     VARCHAR(100)     NOT NULL
+);
+
+INSERT INTO Solver VALUES(1, &quot;Greedy&quot;);
+INSERT INTO Solver VALUES(2, &quot;MZN-Default&quot;);
+INSERT INTO Solver VALUES(3, &quot;MZN-Tweaked&quot;);
+
+CREATE TABLE IF NOT EXISTS JobResult
+   ( ID INTEGER PRIMARY KEY AUTOINCREMENT,
+    ProblemId      INTEGER     NOT NULL,    
+	nTasks         INTEGER     NOT NULL,
+    SolverId       INTEGER NOT NULL,
+    Solved         BOOLEAN  NOT NULL, 
+    Optimally      BOOLEAN  NOT NULL, 
+    SumDist        INTEGER  NOT NULL, 
+    MaxDist        INTEGER  NOT NULL, 
+    ElapsedSecs    REAL  NOT NULL,
+	TimeLimit      INTEGER NOT NULL,
+	Odroid         BOOLEAN NOT NULL, 
+    FOREIGN KEY(SolverId) REFERENCES Solver(ID)
+) ;
+</sql><sql name="runtimePerNTasks.sql">
+Create View RuntimeOne as SELECT jr.nTasks, AVG(jr.ElapsedSecs) as MeanSecs, AVG( (jr.ElapsedSecs - sub.a) * (jr.ElapsedSecs - sub.a) ) as VarSecs
+FROM JobResult as jr,
+( SELECT jr2.nTasks as nTasks2, AVG(jr2.ElapsedSecs) as a from JobResult as jr2 where jr2.TimeLimit = 60 and jr2.SolverId = 1 group by nTasks) as sub
+where TimeLimit = 60 and SolverId = 1 and sub.nTasks2 = jr.nTasks
+group by nTasks;
+
+Create View RuntimeTwo as SELECT jr.nTasks, AVG(jr.ElapsedSecs) as MeanSecs, AVG( (jr.ElapsedSecs - sub.a) * (jr.ElapsedSecs - sub.a) ) as VarSecs
+FROM JobResult as jr,
+( SELECT jr2.nTasks as nTasks2, AVG(jr2.ElapsedSecs) as a from JobResult as jr2 where jr2.TimeLimit = 60 and jr2.SolverId = 2 group by nTasks) as sub
+where TimeLimit = 60 and SolverId = 2 and sub.nTasks2 = jr.nTasks
+group by nTasks;
+
+Create View RuntimeThree as SELECT jr.nTasks, AVG(jr.ElapsedSecs) as MeanSecs, AVG( (jr.ElapsedSecs - sub.a) * (jr.ElapsedSecs - sub.a) ) as VarSecs
+FROM JobResult as jr,
+( SELECT jr2.nTasks as nTasks2, AVG(jr2.ElapsedSecs) as a from JobResult as jr2 where jr2.TimeLimit = 60 and jr2.SolverId = 3 group by nTasks) as sub
+where TimeLimit = 60 and SolverId = 3 and sub.nTasks2 = jr.nTasks
+group by nTasks;
+
+SELECT * FROM
+RuntimeOne as ro, RuntimeTwo as rtw, RuntimeThree as rt
+where ro.nTasks = rtw.nTasks and rtw.nTasks = rt.nTasks;
+
+ Drop View RuntimeOne; Drop View RuntimeTwo; Drop View RuntimeThree; 
+</sql><sql name="Objectives.Sql">
+Create View if not exists ObjOne as Select ProblemId, nTasks, SolverId, MaxDist 
+From JobResult
+where Solved and TimeLimit = 60 and SolverId=1;
+
+Create View if not exists ObjTwo as Select ProblemId, nTasks, SolverId, MaxDist 
+From JobResult
+where Solved and TimeLimit = 60 and SolverId=2;
+
+Create View if not exists ObjThree as Select ProblemId, nTasks, SolverId, MaxDist 
+From JobResult
+where Solved and TimeLimit = 60 and SolverId=3;
+
+Create View If not Exists ObjectiveComparison as Select oo.ProblemId, oo.nTasks, 
+       oo.SolverId, oo.MaxDist as MaxDistOne,
+	   otw.SolverId, otw.MaxDist as MaxDistTwo,
+	   ot.SolverId, ot.MaxDist as MaxDistThree,
+	   1.0 - (1.0*oo.MaxDist / ot.MaxDist) as RelImpr
+From ObjOne as oo,
+     ObjTwo as otw,
+	 ObjThree as ot
+where oo.ProblemId = otw.ProblemId and otw.ProblemId = ot.ProblemId;
+
+SELECT * FROM 
+SolveStats,
+(SELECT nTasks, AVG(RelImpr) FROM ObjectiveComparison  Group By nTasks) as AvgImpr
+where AvgImpr.nTasks = SolveStats.nTasks;
+</sql><sql name="solved.sql">
+
+Create View If not exists SolvedOne as SELECT jr.nTasks, AVG(jr.Solved) as Solved
+FROM JobResult as jr
+where TimeLimit = 60 and SolverId = 1
+group by nTasks;
+
+Create View If not exists SolvedTwo as SELECT jr.nTasks, AVG(jr.Solved) as Solved
+FROM JobResult as jr
+where TimeLimit = 60 and SolverId = 2
+group by nTasks;
+
+CREATE VIEW If not exists SolveStats as Select co.nTasks, co.Solved, ct.Solved FROM 
+SolvedOne as co, SolvedTwo as ct
+Where co.nTasks = ct.nTasks;
+
+SELECT * FROM SolveStats;</sql><sql name="optimallyClosed.sql">--Drop View ClosedOne; Drop View ClosedTwo;
+
+Create View If not exists ClosedOne as SELECT jr.nTasks, AVG(jr.Optimally) as Closed
+FROM JobResult as jr
+where TimeLimit = 60 and SolverId = 1
+group by nTasks;
+
+Create View If not exists ClosedTwo as SELECT jr.nTasks, AVG(jr.Optimally) as Closed
+FROM JobResult as jr
+where TimeLimit = 60 and SolverId = 2
+group by nTasks;
+
+Select co.nTasks, co.Closed, ct.Closed FROM 
+ClosedOne as co, ClosedTwo as ct
+Where co.nTasks = ct.nTasks
+
+</sql><current_tab id="1"/></tab_sql></sqlb_project>

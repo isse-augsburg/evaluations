@@ -1,0 +1,7 @@
+# Evaluation questions:
+
+1.) How far can we go up to solving SR-ST-Problems *optimally*
+    What is the ratio between a desktop PC and the odroid?
+
+2.) After that threshold, how well are 5 seconds of computation time invested compared to a greedy solver?
+    Only evaluate this on the odroid

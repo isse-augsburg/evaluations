@@ -1,0 +1,2 @@
+DROP TABLE Solver;
+DROP TABLE JobResult
